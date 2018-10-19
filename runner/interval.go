@@ -14,7 +14,7 @@ func NewInterval(
 	interval time.Duration,
 ) Interval {
 	return Interval{
-		runFunc:      runFunc,
+		runFunc:  runFunc,
 		interval: interval,
 	}
 }
@@ -22,11 +22,11 @@ func NewInterval(
 type RunFunc func(ctx context.Context)
 
 type Interval struct {
-	runFunc RunFunc
+	runFunc  RunFunc
 	interval time.Duration
-	timer   *time.Timer
+	timer    *time.Timer
 
-	statusChan  chan varmint.Status
+	statusChan chan varmint.Status
 }
 
 func (i *Interval) Stop() {
@@ -46,7 +46,7 @@ func (i *Interval) Start(ctx context.Context) {
 	timer := time.NewTimer(i.interval)
 	i.timer = timer
 
-	go func () {
+	go func() {
 		defer timer.Stop()
 		for {
 			select {
@@ -84,7 +84,7 @@ func (i *Interval) Runner(ctx context.Context) ifrit.Runner {
 
 func (i *Interval) Track() <-chan varmint.Status {
 	// don't allocate status channel varmint starts Tracking it
-	if i.statusChan == nil{
+	if i.statusChan == nil {
 		i.statusChan = make(chan varmint.Status, 0)
 	}
 	return i.statusChan
