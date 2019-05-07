@@ -3,8 +3,9 @@ package runner_test
 import (
 	"context"
 	//"fmt"
-	"github.com/topherbullock/varmint"
 	"time"
+
+	"github.com/topherbullock/varmint"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,6 +32,10 @@ var _ = Describe("Interval", func() {
 		}
 
 		intervalRunner = runner.NewInterval(runFunc, interval)
+	})
+
+	AfterEach(func() {
+		cancel()
 	})
 
 	Describe("Start", func() {
@@ -70,7 +75,7 @@ var _ = Describe("Interval", func() {
 			Expect(event.String()).To(Equal("Cancelled"))
 		})
 
-		FIt("Emits status when stopped", func() {
+		It("Emits status when stopped", func() {
 			time.AfterFunc(2010*time.Millisecond, cancel)
 			time.AfterFunc(1010*time.Millisecond, intervalRunner.Stop)
 			event := <-statusChan

@@ -9,19 +9,14 @@ import (
 	"github.com/topherbullock/varmint"
 )
 
-func NewInterval(
-	runFunc RunFunc,
-	interval time.Duration,
-) Interval {
-	return Interval{
-		runFunc:  runFunc,
-		interval: interval,
-	}
+type Interval interface {
+	Stoppable
+	Startable
+	Resetable
+	varmint.Trackable
 }
 
-type RunFunc func(ctx context.Context)
-
-type Interval struct {
+type interval struct {
 	runFunc  RunFunc
 	interval time.Duration
 	timer    *time.Timer
@@ -29,20 +24,30 @@ type Interval struct {
 	statusChan chan varmint.Status
 }
 
-func (i *Interval) Stop() {
+func NewInterval(
+	runFunc RunFunc,
+	runInterval time.Duration,
+) Interval {
+	return &interval{
+		runFunc:  runFunc,
+		interval: runInterval,
+	}
+}
+
+func (i *interval) Stop() {
 	if i.timer != nil {
 		i.timer.Stop()
 	}
 	i.status(varmint.Paused)
 }
 
-func (i *Interval) Reset() {
+func (i *interval) Reset() {
 	i.Stop()
 	i.timer.Reset(i.interval)
 	i.status(varmint.Waiting)
 }
 
-func (i *Interval) Start(ctx context.Context) {
+func (i *interval) Start(ctx context.Context) {
 	timer := time.NewTimer(i.interval)
 	i.timer = timer
 
@@ -65,7 +70,7 @@ func (i *Interval) Start(ctx context.Context) {
 }
 
 // Provides an ifrit.Runner
-func (i *Interval) Runner(ctx context.Context) ifrit.Runner {
+func (i *interval) Runner(ctx context.Context) ifrit.Runner {
 	newCtx, cancel := context.WithCancel(ctx)
 
 	return ifrit.RunFunc(func(signals <-chan os.Signal, ready chan<- struct{}) error {
@@ -82,7 +87,9 @@ func (i *Interval) Runner(ctx context.Context) ifrit.Runner {
 	})
 }
 
-func (i *Interval) Track() <-chan varmint.Status {
+func (i *interval) Track() <-chan varmint.Status {
+	// TODO concrrent calls to track
+	//
 	// don't allocate status channel varmint starts Tracking it
 	if i.statusChan == nil {
 		i.statusChan = make(chan varmint.Status, 0)
@@ -90,13 +97,13 @@ func (i *Interval) Track() <-chan varmint.Status {
 	return i.statusChan
 }
 
-func (i *Interval) run(ctx context.Context) {
+func (i *interval) run(ctx context.Context) {
 	i.status(varmint.Running)
 	defer i.status(varmint.Waiting)
 	i.runFunc(ctx)
 }
 
-func (i *Interval) status(update varmint.Status) {
+func (i *interval) status(update varmint.Status) {
 	if i.statusChan != nil {
 		i.statusChan <- update
 	}
